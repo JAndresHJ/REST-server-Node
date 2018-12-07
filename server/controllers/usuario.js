@@ -1,25 +1,21 @@
-
-
 const express = require('express');
 const bcrypt = require('bcrypt');
 const _ = require('underscore');
-const app = express();
 const Usuario = require('../models/usuario');
+const{ verifyToken, checkForAdmin } = require('../middlewares/authentication'); // Import both middlewares tokenVerification and checkForAdmin
+const app = express();
 
-
-
-app.get('/usuario', function (req, res) {
-
+app.get('/usuario', verifyToken, (req, res) => {  // Middleware
     let desde = req.query.desde || 0;
     desde = Number(desde);
 
     let limite = req.query.limite || 5;
     limite = Number(limite);
 
-    Usuario.find({estado:true}, 'nombre email role estado google img') // Filtro. Se regresan los estados del segundo argumento
+    Usuario.find({estado:true}, 'nombre email role estado google img') // Filter. Se regresan los estados del segundo argumento
             .skip(desde)
             .limit(limite)
-            .exec( (err, usuarios) => {  //Ejecutar                
+            .exec( (err, usuarios) => {  //Executes                
                 if (err){
                     return res.status(400).json({
                         ok: false,
@@ -27,27 +23,19 @@ app.get('/usuario', function (req, res) {
                     });
                 }
 
-                Usuario.count({estado: true},(err, conteo) => { // Debe tener el mismo filtro
-
+                Usuario.count({estado: true},(err, conteo) => { // It must have the same filter
                     res.json({
                         ok: true,
                         usuarios,
                         conteo
                     })
-                })
-               
-            });
- 
+                })               
+            }); 
 });
 
-
-
-// POST Usado para crear nuevos registros
-app.post('/usuario', function (req, res) {
-
-   
-    let body = req.body;
-
+// POST Create new registers
+app.post('/usuario', [verifyToken, checkForAdmin], function (req, res) {   
+     let body = req.body;
      let usuario = new Usuario({
         nombre: body.nombre,
         email: body.email,
@@ -64,24 +52,20 @@ app.post('/usuario', function (req, res) {
         }
 
        // usuarioDB.password = null; //esconder psw de usuario, pero aun se vería el valor de null
-
         res.json({
             ok: true,
             usuario: usuarioDB
         });
     });
-
 });
 
 
 //PUT Usado para actualizar datos
-app.put('/usuario/:id', function (req, res) {
-
+app.put('/usuario/:id', [verifyToken, checkForAdmin], function (req, res) {
     let id = req.params.id;
     let body = _.pick(req.body, ['nombre','email','img','role', 'estado']); // Seleccionar los campos que se pueden actualizar
 
-    Usuario.findByIdAndUpdate(id, body, {new: true, runValidators: true}, (err, usuarioDB) => {
-        
+    Usuario.findByIdAndUpdate(id, body, {new: true, runValidators: true}, (err, usuarioDB) => {        
         if(err){
             return res.status(400).json({
                 ok: false,
@@ -98,10 +82,8 @@ app.put('/usuario/:id', function (req, res) {
 
 })
 
-
 // DELETE
-app.delete('/usuario/:id', function (req, res) {
-    
+app.delete('/usuario/:id', [verifyToken, checkForAdmin], function (req, res) {    
     let id = req.params.id;
     let cambiaEstado = {
         estado: false
@@ -130,9 +112,6 @@ app.delete('/usuario/:id', function (req, res) {
             usuarioBorrado
         });
     })
-
-
 })
-
 
 module.exports = app;
