@@ -37,12 +37,32 @@ let checkForAdmin = (req, res, next) => {
                 message: 'The user is not an ADMIN'
             }
         });
-    }
-
- 
+    } 
 }
+
+//====================
+//   Verify token for images
+//====================
+let verifyTokenImg = (req, res, next) => {
+
+    let token = req.query.token;   // Get the token from a query (?)
+
+    jwt.verify(token, process.env.SEED, (err, decoded) => {
+
+        if (err) {
+            return res.status(401).json({ // Unauthorized
+                ok: false,
+                err
+            });
+        }
+        req.usuario = decoded.usuario;
+        next();
+
+    });
+};
 
 module.exports = {
     verifyToken,
-    checkForAdmin
+    checkForAdmin,
+    verifyTokenImg
 }
